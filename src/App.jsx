@@ -2,7 +2,6 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { supabase } from './supabase'
 import Auth from './Auth'
 
-// ─── קבועים ─────────────────────────────────────────────────────────────────
 const STATUS_LABELS = { new:'ליד חדש', contact:'יצירת קשר', design:'תכנון מטבח', offer:'הצעת מחיר', closed:'סגירה', lost:'אבוד' }
 const STATUS_ORDER = ['new','contact','design','offer','closed','lost']
 const STATUS_COLORS = { new:'#185FA5', contact:'#854F0B', design:'#27500A', offer:'#3C3489', closed:'#177a3c', lost:'#791F1F' }
@@ -11,7 +10,6 @@ const STATUS_BG = { new:'#E6F1FB', contact:'#FAEEDA', design:'#EAF3DE', offer:'#
 const fmt = n => n ? '₪' + Number(n).toLocaleString() : '—'
 const daysSince = d => Math.floor((new Date() - new Date(d)) / 864e5)
 
-// ─── CSS ─────────────────────────────────────────────────────────────────────
 const CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600&display=swap');
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -58,7 +56,6 @@ button{font-family:inherit;cursor:pointer}
 .kpi.amber{border-right-color:var(--amber)}.kpi.purple{border-right-color:#534AB7}
 .kpi-label{font-size:10px;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em;font-weight:500}
 .kpi-val{font-size:22px;font-weight:600}
-.kpi-sub{font-size:10px;color:var(--faint);margin-top:3px}
 .dash-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px}
 .card-title{font-size:10px;font-weight:600;color:var(--muted);margin-bottom:12px;text-transform:uppercase;letter-spacing:.06em}
@@ -134,7 +131,6 @@ tr:hover td{background:var(--surface2);cursor:pointer}
 .lb-img{max-width:92vw;max-height:88vh;border-radius:8px;object-fit:contain}
 `
 
-// ─── AI ──────────────────────────────────────────────────────────────────────
 async function callClaude(messages) {
   const key = import.meta.env.VITE_CLAUDE_API_KEY || ''
   if (!key) return '⚠️ יש להגדיר VITE_CLAUDE_API_KEY'
@@ -147,7 +143,6 @@ async function callClaude(messages) {
   return d.content?.find(b=>b.type==='text')?.text||''
 }
 
-// ─── קומפוננטות עזר ──────────────────────────────────────────────────────────
 function SBadge({s}){
   const cls={new:'s-new',contact:'s-contact',design:'s-design',offer:'s-offer',closed:'s-closed',lost:'s-lost'}
   return <span className={`sbadge ${cls[s]||'s-new'}`}>{STATUS_LABELS[s]}</span>
@@ -163,12 +158,23 @@ function AgeLabel({date}){
   return <span className="age-old">לפני {n}י׳</span>
 }
 
-// ─── לוח בקרה ────────────────────────────────────────────────────────────────
+function PositionSelect({k,lbl,opts,form,set}){
+  return <div className="ffield">
+    <label className="flabel">{lbl}</label>
+    <select className="finput" value={form[k]||''} onChange={e=>set(k,e.target.value)}>
+      {opts.map(o=><option key={o}>{o}</option>)}
+    </select>
+    {form[k]==='אחר'&&(
+      <input className="finput" style={{marginTop:6}} value={form[k+'_other']||''} onChange={e=>set(k+'_other',e.target.value)} placeholder={`פרטי ${lbl}...`}/>
+    )}
+  </div>
+}
+
 function Dashboard({leads}){
-  const rev = leads.filter(l=>l.status==='closed').reduce((s,l)=>s+(l.price||0),0)
-  const dep = leads.reduce((s,l)=>s+(l.deposit||0),0)
-  const notDelivered = leads.filter(l=>l.status==='closed'&&!l.supplied).length
-  const counts={}; STATUS_ORDER.forEach(s=>counts[s]=leads.filter(l=>l.status===s).length)
+  const rev=leads.filter(l=>l.status==='closed').reduce((s,l)=>s+(l.price||0),0)
+  const dep=leads.reduce((s,l)=>s+(l.deposit||0),0)
+  const notDelivered=leads.filter(l=>l.status==='closed'&&!l.supplied).length
+  const counts={};STATUS_ORDER.forEach(s=>counts[s]=leads.filter(l=>l.status===s).length)
   const maxC=Math.max(...Object.values(counts),1)
   const oldLeads=[...leads].filter(l=>!['closed','lost'].includes(l.status)).sort((a,b)=>new Date(a.date)-new Date(b.date))
   return <>
@@ -205,35 +211,29 @@ function Dashboard({leads}){
   </>
 }
 
-// ─── טבלת לקוחות ─────────────────────────────────────────────────────────────
 function LeadsTable({leads,onEdit,onSketchUpload,onSketchView}){
   const [filter,setFilter]=useState('all')
   const [q,setQ]=useState('')
   const [sortDir,setSortDir]=useState('desc')
   const fileRef=useRef(null)
   const [quickId,setQuickId]=useState(null)
-
   const list=[...leads].filter(l=>{
     const mq=!q||l.name?.includes(q)||l.city?.includes(q)||l.phone?.includes(q)||l.agent?.includes(q)
     return mq&&(filter==='all'||l.status===filter)
   }).sort((a,b)=>sortDir==='asc'?new Date(a.date)-new Date(b.date):new Date(b.date)-new Date(a.date))
-
   function handleQuickUpload(e){
-    const file=e.target.files[0]; if(!file||!quickId)return
+    const file=e.target.files[0];if(!file||!quickId)return
     const reader=new FileReader()
     reader.onload=ev=>{onSketchUpload(quickId,ev.target.result);e.target.value=''}
     reader.readAsDataURL(file)
   }
-
   return <>
     <div className="toolbar">
       <input className="search" placeholder="חיפוש שם, עיר, טלפון, סוכן..." value={q} onChange={e=>setQ(e.target.value)}/>
       <div style={{display:'flex',gap:5,flexWrap:'wrap'}}>
         {['all',...STATUS_ORDER].map(s=><button key={s} className={`chip${filter===s?' active':''}`} onClick={()=>setFilter(s)}>{s==='all'?'הכל':STATUS_LABELS[s]}</button>)}
       </div>
-      <button className={`chip${sortDir==='asc'?' active':''}`} onClick={()=>setSortDir(d=>d==='asc'?'desc':'asc')}>
-        {sortDir==='asc'?'↑ ישן→חדש':'↓ חדש→ישן'}
-      </button>
+      <button className={`chip${sortDir==='asc'?' active':''}`} onClick={()=>setSortDir(d=>d==='asc'?'desc':'asc')}>{sortDir==='asc'?'↑ ישן→חדש':'↓ חדש→ישן'}</button>
     </div>
     <div className="table-wrap">
       <table>
@@ -255,20 +255,13 @@ function LeadsTable({leads,onEdit,onSketchUpload,onSketchView}){
           {!list.length&&<tr><td colSpan={12} style={{textAlign:'center',color:'var(--muted)',padding:28}}>אין תוצאות</td></tr>}
           {list.map(l=><tr key={l.id} onClick={()=>onEdit(l)}>
             <td onClick={e=>e.stopPropagation()}>
-              {l.sketch
-                ?<img className="sketch-thumb" src={l.sketch} onClick={()=>onSketchView(l.sketch)} alt="שרטוט"/>
+              {l.sketch?<img className="sketch-thumb" src={l.sketch} onClick={()=>onSketchView(l.sketch)} alt="שרטוט"/>
                 :<button className="sketch-icon" onClick={()=>{setQuickId(l.id);fileRef.current?.click()}}>🖼️</button>}
             </td>
-            <td>
-              <div style={{fontWeight:600,fontSize:13}}>{l.name}</div>
-              <div style={{fontSize:10,color:'var(--muted)'}}>{l.address||''}</div>
-            </td>
+            <td><div style={{fontWeight:600,fontSize:13}}>{l.name}</div><div style={{fontSize:10,color:'var(--muted)'}}>{l.address||''}</div></td>
             <td style={{color:'var(--muted)'}}>{l.phone||'—'}</td>
             <td style={{color:'var(--muted)'}}>{l.city||'—'}</td>
-            <td>
-              <div style={{fontSize:12}}>{l.kitchen_color||'—'}</div>
-              <div style={{fontSize:10,color:'var(--muted)'}}>{l.marble_color||''}</div>
-            </td>
+            <td><div style={{fontSize:12}}>{l.kitchen_color||'—'}</div><div style={{fontSize:10,color:'var(--muted)'}}>{l.marble_color||''}</div></td>
             <td style={{fontWeight:600,color:'var(--green)'}}>{fmt(l.price)}</td>
             <td style={{color:'var(--muted)'}}>{fmt(l.deposit)}</td>
             <td style={{color:'var(--muted)'}}>{fmt(l.delivery_price)}</td>
@@ -284,15 +277,13 @@ function LeadsTable({leads,onEdit,onSketchUpload,onSketchView}){
   </>
 }
 
-// ─── קנבן ────────────────────────────────────────────────────────────────────
 function Kanban({leads,onEdit}){
   return <div className="kanban">
     {STATUS_ORDER.filter(s=>s!=='lost').map(s=>{
       const cards=leads.filter(l=>l.status===s)
       return <div key={s} className="kcol">
         <div className="khdr" style={{background:STATUS_BG[s],color:STATUS_COLORS[s]}}>
-          {STATUS_LABELS[s]}
-          <span style={{background:'rgba(0,0,0,.1)',borderRadius:10,padding:'0 7px',fontWeight:400}}>{cards.length}</span>
+          {STATUS_LABELS[s]}<span style={{background:'rgba(0,0,0,.1)',borderRadius:10,padding:'0 7px',fontWeight:400}}>{cards.length}</span>
         </div>
         <div className="kcnt">
           {cards.map(l=><div key={l.id} className="kcard" onClick={()=>onEdit(l)}>
@@ -310,7 +301,6 @@ function Kanban({leads,onEdit}){
   </div>
 }
 
-// ─── AI Center ───────────────────────────────────────────────────────────────
 function AICenter({leads}){
   const [tab,setTab]=useState('analyze')
   const [selId,setSelId]=useState(leads[0]?.id||null)
@@ -321,9 +311,8 @@ function AICenter({leads}){
   const chatRef=useRef(null)
   useEffect(()=>{if(chatRef.current)chatRef.current.scrollTop=chatRef.current.scrollHeight},[chatMsgs])
   const hasKey=!!import.meta.env.VITE_CLAUDE_API_KEY
-
   async function analyze(){
-    const lead=leads.find(l=>l.id===selId); if(!lead)return
+    const lead=leads.find(l=>l.id===selId);if(!lead)return
     setLoading(true);setResult('')
     const r=await callClaude([{role:'user',content:`נתח: ${lead.name} | ${lead.city} | מחיר: ${fmt(lead.price)} | שלב: ${STATUS_LABELS[lead.status]} | מטבח: ${lead.kitchen_color||'—'}\nתן: 1) פוטנציאל 2) צעד הבא 3) סיכון 4) טיפ לסגירה`}])
     setResult(r);setLoading(false)
@@ -343,21 +332,14 @@ function AICenter({leads}){
     setChatMsgs(prev=>[...prev,{role:'ai',text:r}])
     setLoading(false)
   }
-
-  if(!hasKey)return <div className="card" style={{fontSize:13,color:'var(--muted)',lineHeight:1.7}}>
-    <div style={{fontWeight:600,marginBottom:8,fontSize:14,color:'var(--text)'}}>🤖 AI Center</div>
-    יש להגדיר <code>VITE_CLAUDE_API_KEY</code> ב-Vercel → Environment Variables.
-  </div>
-
+  if(!hasKey)return <div className="card" style={{fontSize:13,color:'var(--muted)',lineHeight:1.7}}><div style={{fontWeight:600,marginBottom:8,fontSize:14,color:'var(--text)'}}>🤖 AI Center</div>יש להגדיר <code>VITE_CLAUDE_API_KEY</code> ב-Vercel → Environment Variables.</div>
   return <div>
     <div className="ai-tabs">
       {[['analyze','🔍 ניתוח לקוח'],['weekly','📊 סיכום שבועי'],['chat',"💬 צ'אט"]].map(([v,l])=>
         <button key={v} className={`ai-tab${tab===v?' active':''}`} onClick={()=>{setTab(v);setResult('')}}>{l}</button>)}
     </div>
     {tab==='analyze'&&<div className="ai-box">
-      <select className="lead-sel" value={selId||''} onChange={e=>setSelId(e.target.value)}>
-        {leads.map(l=><option key={l.id} value={l.id}>{l.name} — {l.city} — {fmt(l.price)}</option>)}
-      </select>
+      <select className="lead-sel" value={selId||''} onChange={e=>setSelId(e.target.value)}>{leads.map(l=><option key={l.id} value={l.id}>{l.name} — {l.city} — {fmt(l.price)}</option>)}</select>
       <button className="btn primary" style={{marginTop:12}} onClick={analyze} disabled={loading||!selId}>{loading?<span className="spinner"/>:'נתח →'}</button>
       {result&&<div className="ai-result">{result}</div>}
     </div>}
@@ -368,9 +350,7 @@ function AICenter({leads}){
     </div>}
     {tab==='chat'&&<div className="ai-box">
       <div className="chat-messages" ref={chatRef}>
-        {chatMsgs.map((m,i)=><div key={i} className={`chat-msg ${m.role==='user'?'user':'ai'}`}>
-          <div className="chat-bubble">{m.text}</div>
-        </div>)}
+        {chatMsgs.map((m,i)=><div key={i} className={`chat-msg ${m.role==='user'?'user':'ai'}`}><div className="chat-bubble">{m.text}</div></div>)}
         {loading&&<div className="chat-msg ai"><div className="chat-bubble"><span className="spinner"/></div></div>}
       </div>
       <div className="chat-input-row">
@@ -381,10 +361,8 @@ function AICenter({leads}){
   </div>
 }
 
-// ─── דוחות ───────────────────────────────────────────────────────────────────
 function Reports({leads}){
   const byAgent=leads.reduce((acc,l)=>{if(l.agent){acc[l.agent]=acc[l.agent]||{c:0,r:0};acc[l.agent].c++;if(l.status==='closed')acc[l.agent].r+=(l.price||0)}return acc},{})
-  const byStatus=STATUS_ORDER.map(s=>({s,cnt:leads.filter(l=>l.status===s).length,rev:leads.filter(l=>l.status===s).reduce((a,l)=>a+(l.price||0),0)}))
   const sortedA=Object.entries(byAgent).sort((a,b)=>b[1].c-a[1].c)
   const maxA=sortedA[0]?.[1].c||1
   const rev=leads.filter(l=>l.status==='closed').reduce((s,l)=>s+(l.price||0),0)
@@ -408,20 +386,102 @@ function Reports({leads}){
       </div>
       <div className="card">
         <div className="card-title">הכנסה לפי שלב</div>
-        {byStatus.map(({s,cnt,rev})=>rev>0?<div key={s} style={{display:'flex',justifyContent:'space-between',fontSize:13,padding:'7px 0',borderBottom:'1px solid var(--border)'}}>
-          <div><div style={{fontWeight:500}}>{STATUS_LABELS[s]}</div><div style={{fontSize:10,color:'var(--muted)'}}>{cnt} לקוחות</div></div>
-          <span style={{fontWeight:600,color:'var(--green)'}}>{fmt(rev)}</span>
-        </div>:null)}
+        {STATUS_ORDER.map(s=>{
+          const b=leads.filter(l=>l.status===s).reduce((a,l)=>a+(l.price||0),0)
+          const cnt=leads.filter(l=>l.status===s).length
+          return b>0?<div key={s} style={{display:'flex',justifyContent:'space-between',fontSize:13,padding:'7px 0',borderBottom:'1px solid var(--border)'}}>
+            <div><div style={{fontWeight:500}}>{STATUS_LABELS[s]}</div><div style={{fontSize:10,color:'var(--muted)'}}>{cnt} לקוחות</div></div>
+            <span style={{fontWeight:600,color:'var(--green)'}}>{fmt(b)}</span>
+          </div>:null
+        })}
       </div>
     </div>
   </>
 }
 
-// ─── מודל לקוח ───────────────────────────────────────────────────────────────
+function UsersTab({currentUserId}){
+  const [users,setUsers]=useState([])
+  const [loading,setLoading]=useState(true)
+  const [saving,setSaving]=useState(null)
+  useEffect(()=>{loadUsers()},[])
+  async function loadUsers(){
+    setLoading(true)
+    const{data}=await supabase.from('profiles').select('*').order('created_at')
+    if(data)setUsers(data)
+    setLoading(false)
+  }
+  async function updateRole(id,role){
+    setSaving(id)
+    await supabase.from('profiles').update({role}).eq('id',id)
+    await loadUsers()
+    setSaving(null)
+  }
+  async function updateName(id,full_name){
+    await supabase.from('profiles').update({full_name}).eq('id',id)
+    loadUsers()
+  }
+  const roleColors={admin:{bg:'#EEEDFE',color:'#3C3489'},agent:{bg:'#EAF3DE',color:'#27500A'},viewer:{bg:'#FAEEDA',color:'#633806'}}
+  const roleLabels={admin:'מנהל',agent:'סוכן',viewer:'צפייה בלבד'}
+  if(loading)return <div style={{textAlign:'center',padding:40,color:'var(--muted)'}}><span className="spinner"/></div>
+  return <div>
+    <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
+      <div>
+        <div style={{fontSize:14,fontWeight:600}}>{users.length} משתמשים רשומים</div>
+        <div style={{fontSize:11,color:'var(--muted)',marginTop:2}}>ניהול הרשאות וגישה למערכת</div>
+      </div>
+    </div>
+    <div style={{display:'flex',flexDirection:'column',gap:10}}>
+      {users.map(u=>{
+        const rc=roleColors[u.role]||roleColors.agent
+        const isMe=u.id===currentUserId
+        return <div key={u.id} style={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:'var(--radius)',padding:16,display:'flex',gap:14,alignItems:'center'}}>
+          <div style={{width:42,height:42,borderRadius:'50%',background:'var(--blue-dim)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:16,fontWeight:600,color:'var(--blue)',flexShrink:0}}>
+            {(u.full_name||u.email||'?')[0].toUpperCase()}
+          </div>
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:4}}>
+              <input
+                style={{fontSize:13,fontWeight:500,border:'none',background:'transparent',color:'var(--text)',fontFamily:'inherit',width:180,outline:'none',borderBottom:'1px dashed var(--border2)'}}
+                onBlur={e=>updateName(u.id,e.target.value)}
+                defaultValue={u.full_name||''}
+                placeholder="הזן שם מלא"
+              />
+              {isMe&&<span style={{fontSize:10,background:'var(--blue-dim)',color:'var(--blue)',padding:'1px 7px',borderRadius:10,fontWeight:600}}>אני</span>}
+            </div>
+            <div style={{fontSize:11,color:'var(--muted)'}}>{u.email}</div>
+            <div style={{fontSize:10,color:'var(--faint)',marginTop:2}}>נרשם: {new Date(u.created_at).toLocaleDateString('he-IL')}</div>
+          </div>
+          <div style={{display:'flex',flexDirection:'column',gap:6,alignItems:'flex-end'}}>
+            <span style={{background:rc.bg,color:rc.color,fontSize:11,fontWeight:600,padding:'2px 10px',borderRadius:20}}>{roleLabels[u.role]||u.role}</span>
+            <select
+              style={{padding:'5px 8px',fontSize:11,border:'1px solid var(--border2)',borderRadius:'var(--radius-sm)',background:'var(--surface2)',color:'var(--text)',fontFamily:'inherit',cursor:'pointer'}}
+              value={u.role||'agent'}
+              onChange={e=>updateRole(u.id,e.target.value)}
+              disabled={saving===u.id}
+            >
+              <option value="admin">מנהל — גישה מלאה</option>
+              <option value="agent">סוכן — הזנה ועריכה</option>
+              <option value="viewer">צפייה בלבד</option>
+            </select>
+            {saving===u.id&&<span style={{fontSize:10,color:'var(--muted)'}}>שומר...</span>}
+          </div>
+        </div>
+      })}
+    </div>
+    <div style={{marginTop:16,padding:14,background:'var(--surface2)',borderRadius:'var(--radius)',fontSize:12,color:'var(--muted)',lineHeight:1.7}}>
+      💡 <strong>הרשאות:</strong> מנהל — גישה לכל הפיצ׳רים כולל ניהול משתמשים · סוכן — הזנה ועריכת לקוחות · צפייה בלבד — קריאה בלבד
+    </div>
+  </div>
+}
+
 const EMPTY = {
   name:'', phone:'', city:'', address:'', date:'',
   length_top:'', closet_or_flap:'קלפות', length_bottom:'',
-  drawers:'', drawers_position:'שמאל', sink_position:'אמצע',
+  drawers:'', drawers_position:'שמאל',
+  sink_position:'שמאל', sink_position_other:'',
+  dishwasher_position:'אין', dishwasher_position_other:'',
+  oven_position:'אין', oven_position_other:'',
+  stove_position:'מרכז', stove_position_other:'',
   kitchen_color:'', marble_color:'', handles:'', led:'', notes:'',
   price:'', deposit:'', delivery_price:'',
   status:'new', priority:'בינונית', source:'המלצה', agent:'', supplied:false, sketch:null
@@ -440,45 +500,18 @@ function LeadModal({lead,onSave,onDelete,onClose}){
   const [pendingSketch,setPendingSketch]=useState(null)
   const set=(k,v)=>setForm(f=>({...f,[k]:v}))
   const sketchSrc=pendingSketch||form.sketch
-
-  function handleSketch(e){
-    const file=e.target.files[0]; if(!file)return
-    const r=new FileReader(); r.onload=ev=>setPendingSketch(ev.target.result); r.readAsDataURL(file)
-  }
+  function handleSketch(e){const file=e.target.files[0];if(!file)return;const r=new FileReader();r.onload=ev=>setPendingSketch(ev.target.result);r.readAsDataURL(file)}
   function submit(){
     if(!form.name?.trim())return alert('נא להזין שם לקוח')
-    onSave({
-      ...form,
-      price:parseFloat(form.price)||0,
-      deposit:parseFloat(form.deposit)||0,
-      delivery_price:parseFloat(form.delivery_price)||0,
-      length_top:parseFloat(form.length_top)||0,
-      length_bottom:parseFloat(form.length_bottom)||0,
-      drawers:parseInt(form.drawers)||0,
-      sketch:pendingSketch||form.sketch||null,
-      date:form.date||new Date().toISOString().slice(0,10)
-    })
+    onSave({...form,price:parseFloat(form.price)||0,deposit:parseFloat(form.deposit)||0,delivery_price:parseFloat(form.delivery_price)||0,length_top:parseFloat(form.length_top)||0,length_bottom:parseFloat(form.length_bottom)||0,drawers:parseInt(form.drawers)||0,sketch:pendingSketch||form.sketch||null,date:form.date||new Date().toISOString().slice(0,10)})
   }
-
-  const inp=(k,lbl,t='text',ph='')=><div className="ffield">
-    <label className="flabel">{lbl}</label>
-    <input className="finput" type={t} value={form[k]||''} onChange={e=>set(k,e.target.value)} placeholder={ph}/>
-  </div>
-  const sel=(k,lbl,opts)=><div className="ffield">
-    <label className="flabel">{lbl}</label>
-    <select className="finput" value={form[k]||''} onChange={e=>set(k,e.target.value)}>
-      {opts.map(o=><option key={o.v||o} value={o.v||o}>{o.l||o}</option>)}
-    </select>
-  </div>
+  const inp=(k,lbl,t='text',ph='')=><div className="ffield"><label className="flabel">{lbl}</label><input className="finput" type={t} value={form[k]||''} onChange={e=>set(k,e.target.value)} placeholder={ph}/></div>
+  const sel=(k,lbl,opts)=><div className="ffield"><label className="flabel">{lbl}</label><select className="finput" value={form[k]||''} onChange={e=>set(k,e.target.value)}>{opts.map(o=><option key={o.v||o} value={o.v||o}>{o.l||o}</option>)}</select></div>
 
   return <div className="modal-bg" onClick={e=>e.target.className==='modal-bg'&&onClose()}>
     <div className="modal">
-      <div className="modal-header">
-        <div className="modal-title">{lead?'✏️ עריכת לקוח':'➕ לקוח חדש'}</div>
-        <button className="modal-close" onClick={onClose}>✕</button>
-      </div>
+      <div className="modal-header"><div className="modal-title">{lead?'✏️ עריכת לקוח':'➕ לקוח חדש'}</div><button className="modal-close" onClick={onClose}>✕</button></div>
 
-      {/* פרטי לקוח */}
       <div className="form-sec">
         <div className="sec-title">👤 פרטי לקוח</div>
         <div className="fgrid">
@@ -486,26 +519,19 @@ function LeadModal({lead,onSave,onDelete,onClose}){
           {inp('name','שם מלא','text','שם ושם משפחה')}
           {inp('phone','טלפון','tel','050-0000000')}
           {inp('city','עיר','text','עיר')}
-          <div className="ffield span2">
-            <label className="flabel">כתובת</label>
-            <input className="finput" value={form.address||''} onChange={e=>set('address',e.target.value)} placeholder="רחוב ומספר בית"/>
-          </div>
+          <div className="ffield span2"><label className="flabel">כתובת</label><input className="finput" value={form.address||''} onChange={e=>set('address',e.target.value)} placeholder="רחוב ומספר בית"/></div>
         </div>
       </div>
 
-      {/* שרטוט */}
       <div className="form-sec">
         <div className="sec-title">🖼️ שרטוט מטבח</div>
         <div className="sketch-upload" onClick={()=>document.getElementById('sk-inp').click()}>
-          {sketchSrc
-            ?<><img className="sketch-preview" src={sketchSrc} alt="שרטוט"/><div style={{fontSize:11,color:'var(--muted)',marginTop:6}}>לחץ להחלפה</div></>
-            :<><div style={{fontSize:28,marginBottom:6}}>🖼️</div><div style={{fontSize:13,fontWeight:500}}>העלה שרטוט / תמונת מטבח</div><div style={{fontSize:11,color:'var(--muted)',marginTop:4}}>JPG, PNG, HEIC</div></>}
+          {sketchSrc?<><img className="sketch-preview" src={sketchSrc} alt="שרטוט"/><div style={{fontSize:11,color:'var(--muted)',marginTop:6}}>לחץ להחלפה</div></>:<><div style={{fontSize:28,marginBottom:6}}>🖼️</div><div style={{fontSize:13,fontWeight:500}}>העלה שרטוט / תמונת מטבח</div><div style={{fontSize:11,color:'var(--muted)',marginTop:4}}>JPG, PNG, HEIC</div></>}
         </div>
         <input id="sk-inp" type="file" accept="image/*" style={{display:'none'}} onChange={handleSketch}/>
         {sketchSrc&&<button className="btn danger sm" style={{marginTop:6}} onClick={()=>{setPendingSketch(null);set('sketch',null)}}>🗑️ מחק תמונה</button>}
       </div>
 
-      {/* פרטי מטבח */}
       <div className="form-sec">
         <div className="sec-title">🪵 פרטי מטבח</div>
         <div className="fgrid">
@@ -514,30 +540,36 @@ function LeadModal({lead,onSave,onDelete,onClose}){
           {inp('length_bottom','אורך למטה (מ׳)','number','1.9')}
           {inp('drawers','מגירות','number','3')}
           {sel('drawers_position','מיקום מגירות',['שמאל','ימין','מרכז','אחר'])}
-          {sel('sink_position','מיקום כיור',['שמאל','ימין','אמצע','אחר'])}
           {inp('kitchen_color','צבע מטבח','text','לבן, אפור...')}
           {inp('marble_color','צבע שיש','text','שיש לבן עם גידים...')}
           {inp('handles','ידיות אינטגרלי','text','שחור, לבן, נירוסטה...')}
           {inp('led','לד','text','כן / לא / צבע')}
-          <div className="ffield span2">
-            <label className="flabel">תוספות / הערות / חיתוך מיוחד</label>
-            <textarea className="finput" rows={2} value={form.notes||''} onChange={e=>set('notes',e.target.value)} style={{resize:'vertical'}}/>
-          </div>
         </div>
       </div>
 
-      {/* כספים */}
+      <div className="form-sec">
+        <div className="sec-title">🚿 מיקום מכשירים</div>
+        <div className="fgrid">
+          <PositionSelect k="sink_position" lbl="מיקום כיור" opts={['שמאל','ימין','אמצע','אחר']} form={form} set={set}/>
+          <PositionSelect k="dishwasher_position" lbl="מיקום מדיח" opts={['אין','שמאל','ימין','אחר']} form={form} set={set}/>
+          <PositionSelect k="oven_position" lbl="מיקום תנור" opts={['אין','שמאל','ימין','מרכז','אחר']} form={form} set={set}/>
+          <PositionSelect k="stove_position" lbl="מיקום כיריים" opts={['אין','שמאל','ימין','מרכז','אחר']} form={form} set={set}/>
+        </div>
+      </div>
+
+      <div className="form-sec">
+        <div className="ffield full"><label className="flabel">תוספות / הערות / חיתוך מיוחד</label><textarea className="finput" rows={3} value={form.notes||''} onChange={e=>set('notes',e.target.value)} style={{resize:'vertical'}}/></div>
+      </div>
+
       <div className="form-sec">
         <div className="sec-title">💰 כספים</div>
-        <div className="fgrid2">
+        <div className="fgrid">
           {inp('price','מחיר','number','5000')}
           {inp('deposit','מקדמה','number','1000')}
           {inp('delivery_price','הובלה והתקנה','number','500')}
-          <div className="ffield"/>
         </div>
       </div>
 
-      {/* ניהול */}
       <div className="form-sec">
         <div className="sec-title">⚙️ ניהול</div>
         <div className="fgrid">
@@ -548,7 +580,7 @@ function LeadModal({lead,onSave,onDelete,onClose}){
           <div className="ffield">
             <label className="flabel">סופק</label>
             <div style={{display:'flex',alignItems:'center',gap:10,padding:'8px 0'}}>
-              <label style={{position:'relative',width:38,height:20,flexShrink:0}}>
+              <label style={{position:'relative',width:38,height:20,flexShrink:0,cursor:'pointer'}}>
                 <input type="checkbox" checked={!!form.supplied} onChange={e=>set('supplied',e.target.checked)} style={{opacity:0,width:0,height:0}}/>
                 <span style={{position:'absolute',cursor:'pointer',inset:0,background:form.supplied?'var(--green)':'var(--surface2)',border:`1px solid ${form.supplied?'var(--green)':'var(--border2)'}`,borderRadius:20,transition:'.2s'}}>
                   <span style={{position:'absolute',height:14,width:14,right:form.supplied?'auto':2,left:form.supplied?2:'auto',top:2,background:form.supplied?'#fff':'var(--muted)',borderRadius:'50%',transition:'.2s'}}/>
@@ -569,13 +601,13 @@ function LeadModal({lead,onSave,onDelete,onClose}){
   </div>
 }
 
-// ─── App ראשי ─────────────────────────────────────────────────────────────────
 const PAGES=[
   {id:'dashboard',icon:'📊',label:'לוח בקרה',section:'ראשי'},
   {id:'leads',icon:'📋',label:'לקוחות',section:null},
   {id:'kanban',icon:'🗂️',label:'קנבן',section:null},
   {id:'ai',icon:'🤖',label:'AI Center',section:'כלים'},
   {id:'reports',icon:'📈',label:'דוחות',section:null},
+  {id:'users',icon:'👥',label:'משתמשים',section:'ניהול'},
 ]
 
 export default function App(){
@@ -664,6 +696,7 @@ export default function App(){
               {page==='kanban'&&<Kanban leads={leads} onEdit={l=>setModal({type:'lead',data:l})}/>}
               {page==='ai'&&<AICenter leads={leads}/>}
               {page==='reports'&&<Reports leads={leads}/>}
+              {page==='users'&&<UsersTab currentUserId={session.user.id}/>}
             </>}
         </div>
       </div>
