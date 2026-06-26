@@ -239,18 +239,25 @@ function LeadsTable({leads,onEdit,onSketchUpload,onSketchView}){
     <div className="table-wrap">
       <table>
         <thead><tr>
-          <th style={{width:'4%'}}>שרטוט</th>
-          <th style={{width:'14%'}}>שם לקוח</th>
-          <th style={{width:'10%'}}>טלפון</th>
-          <th style={{width:'9%'}}>עיר</th>
-          <th style={{width:'12%'}}>מטבח</th>
-          <th style={{width:'8%'}}>מחיר</th>
-          <th style={{width:'7%'}}>מקדמה</th>
-          <th style={{width:'7%'}}>הובלה</th>
-          <th style={{width:'10%'}}>שלב</th>
-          <th style={{width:'7%'}}>סוכן</th>
-          <th style={{width:'8%'}}>תאריך</th>
-          <th style={{width:'4%'}}></th>
+          <th style={{width:'3%'}}>שרטוט</th>
+          <th style={{width:'10%'}}>שם לקוח</th>
+          <th style={{width:'8%'}}>טלפון</th>
+          <th style={{width:'6%'}}>אזור</th>
+          <th style={{width:'7%'}}>מטבח</th>
+          <th style={{width:'6%'}}>מחיר</th>
+          <th style={{width:'5%'}}>מקדמה</th>
+          <th style={{width:'5%'}}>יתרה</th>
+          <th style={{width:'5%'}}>מלאי</th>
+          <th style={{width:'4%'}}>שיש</th>
+          <th style={{width:'4%'}}>נגרות</th>
+          <th style={{width:'4%'}}>מחסן</th>
+          <th style={{width:'4%'}}>סופק</th>
+          <th style={{width:'4%'}}>קבלה</th>
+          <th style={{width:'7%'}}>סטטוס</th>
+          <th style={{width:'7%'}}>שלב</th>
+          <th style={{width:'6%'}}>סוכן</th>
+          <th style={{width:'6%'}}>תאריך</th>
+          <th style={{width:'3%'}}></th>
         </tr></thead>
         <tbody>
           {!list.length&&<tr><td colSpan={12} style={{textAlign:'center',color:'var(--muted)',padding:28}}>אין תוצאות</td></tr>}
@@ -425,7 +432,11 @@ const EMPTY = {
   drawers:'', drawers_position:'שמאל', sink_position:'אמצע',
   kitchen_color:'', marble_color:'', handles:'', led:'', notes:'',
   price:'', deposit:'', delivery_price:'',
-  status:'new', priority:'בינונית', source:'המלצה', agent:'', supplied:false, sketch:null
+  status:'new', priority:'בינונית', source:'המלצה', agent:'', supplied:false, sketch:null,
+  // שדות ייצור ולוגיסטיקה
+  inventory_status:'', marble_done:false, carpentry_done:false,
+  in_warehouse:false, delivered:false, receipt_sent:false,
+  balance:'', production_status:'', area:''
 }
 
 function LeadModal({lead,onSave,onDelete,onClose}){
@@ -539,6 +550,41 @@ function LeadModal({lead,onSave,onDelete,onClose}){
       </div>
 
       {/* ניהול */}
+      <div className="form-sec">
+        <div className="sec-title">🏭 ייצור ולוגיסטיקה</div>
+        <div className="fgrid">
+          <div className="ffield">
+            <label className="flabel">אזור</label>
+            <input className="finput" value={form.area||''} onChange={e=>set('area',e.target.value)} placeholder="צפון, מרכז, דרום..."/>
+          </div>
+          <div className="ffield">
+            <label className="flabel">מלאי</label>
+            <select className="finput" value={form.inventory_status||''} onChange={e=>set('inventory_status',e.target.value)}>
+              <option value="">—</option>
+              <option>במלאי</option><option>חסר</option><option>הוזמן</option><option>בייצור</option>
+            </select>
+          </div>
+          <div className="ffield">
+            <label className="flabel">סטטוס ייצור</label>
+            <select className="finput" value={form.production_status||''} onChange={e=>set('production_status',e.target.value)}>
+              <option value="">—</option>
+              <option>לא התחיל</option><option>בתהליך</option><option>מוכן</option><option>נשלח</option>
+            </select>
+          </div>
+          <div className="ffield">
+            <label className="flabel">יתרה לתשלום</label>
+            <input className="finput" type="number" value={form.balance||''} onChange={e=>set('balance',parseFloat(e.target.value)||0)} placeholder="0"/>
+          </div>
+        </div>
+        <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:12,marginTop:12}}>
+          {[['marble_done','שיש עשה'],['carpentry_done','נגרות עשה'],['in_warehouse','נמצא במחסן'],['delivered','סופק'],['receipt_sent','יצא קבלה']].map(([k,l])=>(
+            <div key={k} style={{display:'flex',alignItems:'center',gap:8,padding:'8px 12px',background:'var(--surface2)',borderRadius:'var(--radius-sm)',cursor:'pointer'}} onClick={()=>set(k,!form[k])}>
+              <span style={{fontSize:18}}>{form[k]?'✅':'⬜'}</span>
+              <span style={{fontSize:12,fontWeight:500}}>{l}</span>
+            </div>
+          ))}
+        </div>
+      </div>
       <div className="form-sec">
         <div className="sec-title">⚙️ ניהול</div>
         <div className="fgrid">
